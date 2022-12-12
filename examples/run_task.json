@@ -1,0 +1,12 @@
+{
+  "stages": [
+    {
+      "name": "checkout",
+      "git": {"repository": "url", "branch": "master"}
+    },
+    {
+      "name": "test",
+      "cmd": ["pip install pytest", "pytest ."]
+    }
+  ]
+}
