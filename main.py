@@ -15,3 +15,7 @@ class Engine:
             task = json.load(fd)
             self._task_manager.add_task(task["stages"])
         self._runner.run()
+
+
+engine = Engine()
+engine.start()

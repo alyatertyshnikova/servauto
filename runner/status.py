@@ -6,3 +6,4 @@ class Status(enum.Enum):
     FAILED = "failed"
     SUCCESS = "success"
     RUNNING = "running"
+    PENDING = "pending"

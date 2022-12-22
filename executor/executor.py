@@ -6,7 +6,10 @@ from runner.task import Stage
 
 
 class LocalExecutor:
-    def run_stage(self, stage: Stage) -> Tuple[str, str, int]:
+    @staticmethod
+    def run_stage(stage_command: str) -> Tuple[str, str, int]:
         """
         TODO: method should execute a command using subprocess module and return stdout, stderr and exit code
         """
+        command_result = subprocess.run(stage_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True, text=True)
+        return command_result.stdout, command_result.stderr, command_result.returncode
