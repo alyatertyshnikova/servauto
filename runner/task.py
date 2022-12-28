@@ -11,7 +11,6 @@ class Task:
         self._stages: List[Stage] = stages
         self._done: bool = False
 
-    # TODO: Add steps property
     @property
     def stages(self):
         return self._stages
@@ -27,7 +26,6 @@ class Task:
 class Stage(abc.ABC):
     """
     Abstract class for any kind of steps. Should store step command which will be executed.
-    TODO: Make this class abstract with abstract property `command` and non-abs. property `status`
     """
     def __init__(self):
         self._status: Optional[Status] = None
@@ -41,21 +39,15 @@ class Stage(abc.ABC):
         pass
 
     def set_status(self, status: Status) -> None:
-        """
-        TODO: add implementation
-        """
         self._status = status
 
     def set_result(self, result: str) -> None:
-        """
-        TODO: add implementation
-        """
         self._result = result
 
 
 class CmdStage(Stage):
     """
-    TODO: add implementation for the plane stage with cmd argument. A command will be presented as a shell command or bat.
+    Class for shell commands
     """
     def __init__(self, name, commands):
         super().__init__()
@@ -64,12 +56,12 @@ class CmdStage(Stage):
 
     @property
     def command(self) -> str:
-        return '&&'.join(self._commands)
+        return ' && '.join(self._commands)
 
 
 class GitStage(Stage):
     """
-    TODO: add implementation. Main purpose of such stage is to checkout a specific branch for the specified repository.
+    Class for git commands that checkout a specific branch for the specified repository.
     """
     def __init__(self, name, repository, branch):
         super().__init__()
@@ -79,7 +71,7 @@ class GitStage(Stage):
 
     @property
     def command(self) -> str:
-        return f"cd {self._repository} && git checkout {self._branch}"
+        return f"git clone {self._repository} && git checkout {self._branch}"
 
 
 class TaskManager:
@@ -95,7 +87,6 @@ class TaskManager:
         DOCTEST:
         >>> manager = TaskManager()
         >>> manager.add_task([{"name": "checkout", "git": {"repository": "url", "branch": "master"}}])
-        TODO: add implementation
         """
         task_stages = []
         for stage in stages:
@@ -109,9 +100,6 @@ class TaskManager:
         self._tasks.put(task)
 
     def next_task(self) -> Task:
-        """
-        TODO: add implementation. Do not forget to pop the item from the queue!
-        """
         return self._tasks.get()
 
 

@@ -12,12 +12,9 @@ class Runner:
         while self._task_manager.has_task:
             task = self._task_manager.next_task()
             executor = self._available_executors.pop()
-            for stage in task.stages:  # add implementation in the task class
+            for stage in task.stages:
                 stage.set_status(Status.RUNNING)
                 stdout, stderr, exit_code = executor.run_stage(stage.command)
-                # set status here. Exit code may help identify the issues.
-                # set result here
-                # break if there was an error
                 if exit_code == 0:
                     stage.set_status(Status.SUCCESS)
                     stage.set_result(stdout)
