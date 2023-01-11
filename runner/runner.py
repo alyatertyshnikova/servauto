@@ -9,8 +9,7 @@ class Runner:
         self._available_executors = [LocalExecutor()]
 
     def run(self):
-        while self._task_manager.has_task:
-            task = self._task_manager.next_task()
+        for task in self._task_manager:
             executor = self._available_executors.pop()
             for stage in task.stages:
                 stage.set_status(Status.RUNNING)
@@ -24,4 +23,5 @@ class Runner:
                     break
 
             task.set_done()
+            self._task_manager.complete_task(task)
             self._available_executors.append(executor)
