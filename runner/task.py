@@ -3,13 +3,19 @@ import doctest
 from queue import SimpleQueue
 from typing import List, Optional
 
+from models.models import GitStageModel, CmdStageModel
 from runner.status import Status
 
 
 class Task:
-    def __init__(self, stages: list):
+    def __init__(self, id_: str, stages: list):
+        self._id: str = id_
         self._stages: List[Stage] = stages
         self._done: bool = False
+
+    @property
+    def id(self) -> str:
+        return self._id
 
     @property
     def stages(self):
@@ -27,7 +33,8 @@ class Stage(abc.ABC):
     """
     Abstract class for any kind of steps. Should store step command which will be executed.
     """
-    def __init__(self):
+    def __init__(self, name):
+        self._name: str = name
         self._status: Optional[Status] = None
         self._result: Optional[str] = None
 
@@ -37,6 +44,14 @@ class Stage(abc.ABC):
         Returns a shell command that should be executed by Executor instance.
         """
         pass
+
+    @property
+    def status(self) -> Optional[Status]:
+        return self._status
+
+    @property
+    def name(self) -> Optional[str]:
+        return self._name
 
     def set_status(self, status: Status) -> None:
         self._status = status
@@ -50,8 +65,7 @@ class CmdStage(Stage):
     Class for shell commands
     """
     def __init__(self, name, commands):
-        super().__init__()
-        self._name: str = name
+        super().__init__(name)
         self._commands: list[str] = commands
 
     @property
@@ -64,8 +78,7 @@ class GitStage(Stage):
     Class for git commands that checkout a specific branch for the specified repository.
     """
     def __init__(self, name, repository, branch):
-        super().__init__()
-        self._name: str = name
+        super().__init__(name)
         self._repository: str = repository
         self._branch: str = branch
 
@@ -77,12 +90,16 @@ class GitStage(Stage):
 class TaskManager:
     def __init__(self):
         self._tasks = SimpleQueue()
+        self._completed_tasks: List[Task] = []
+
+    def __iter__(self):
+        return TaskManagerIter(self)
 
     @property
-    def has_task(self) -> bool:
-        return not self._tasks.empty()
+    def tasks(self):
+        return self._tasks
 
-    def add_task(self, stages: List[dict]):
+    def add_task(self, id_: str, stages: List[GitStageModel | CmdStageModel]):
         """
         DOCTEST:
         >>> manager = TaskManager()
@@ -90,17 +107,41 @@ class TaskManager:
         """
         task_stages = []
         for stage in stages:
-            if stage.get("git") is not None:
-                new_stage = GitStage(stage["name"], stage["git"]["repository"], stage["git"]["branch"])
+            if isinstance(stage, GitStageModel):
+                new_stage = GitStage(stage.name, stage.git.repository, stage.git.branch)
             else:
-                new_stage = CmdStage(stage["name"], stage["cmd"])
+                new_stage = CmdStage(stage.name, stage.cmd)
             new_stage.set_status(Status.PENDING)
             task_stages.append(new_stage)
-        task = Task(task_stages)
+        task = Task(id_, task_stages)
         self._tasks.put(task)
 
-    def next_task(self) -> Task:
-        return self._tasks.get()
+    def complete_task(self, task: Task):
+        """
+        Adds task to the list of completed ones
+        :param task:
+        :return:
+        """
+        self._completed_tasks.append(task)
+
+    def get_completed_task_by_id(self, task_id: str) -> Task:
+        """
+        Finds task by its id and returns it
+        :param task_id:
+        :return:
+        """
+        completed_task = next(task for task in self._completed_tasks if task.id == task_id)
+        return completed_task
+
+
+class TaskManagerIter:
+    def __init__(self, task_manager: TaskManager):
+        self._tasks = task_manager.tasks
+
+    def __next__(self) -> Task:
+        if not self._tasks.empty():
+            return self._tasks.get()
+        raise StopIteration
 
 
 if __name__ == '__main__':

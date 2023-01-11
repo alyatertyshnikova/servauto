@@ -2,8 +2,6 @@
 import subprocess
 from typing import Tuple
 
-from runner.task import Stage
-
 
 class LocalExecutor:
     @staticmethod
