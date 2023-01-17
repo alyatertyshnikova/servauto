@@ -12,11 +12,6 @@ engine = Engine()
 
 @app.post("/run_task")
 def run_task(task: TaskModel) -> str:
-    """
-    Runs the task
-    :param task:
-    :return: task id
-    """
     task_id = str(uuid.uuid1())
     engine.start(task_id, task)
     return task_id
@@ -26,8 +21,6 @@ def run_task(task: TaskModel) -> str:
 def get_task_status(task_id: str) -> str:
     """
     Finds task by id and returns its status
-    :param task_id:
-    :return:
     """
     task_status = engine.get_task_status(task_id)
     return task_status

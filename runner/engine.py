@@ -18,8 +18,6 @@ class Engine:
     def get_task_status(self, task_id: str) -> str:
         """
         Finds task by its id and collects its stages statuses into one
-        :param task_id:
-        :return:
         """
         task_status = ""
         task = self._task_manager.get_completed_task_by_id(task_id)

@@ -1,32 +1,10 @@
 import abc
 import doctest
 from queue import SimpleQueue
-from typing import List, Optional
+from typing import List, Optional, Union, Iterator
 
 from models.models import GitStageModel, CmdStageModel
 from runner.status import Status
-
-
-class Task:
-    def __init__(self, id_: str, stages: list):
-        self._id: str = id_
-        self._stages: List[Stage] = stages
-        self._done: bool = False
-
-    @property
-    def id(self) -> str:
-        return self._id
-
-    @property
-    def stages(self):
-        return self._stages
-
-    def set_done(self):
-        self._done = True
-
-    @property
-    def done(self):
-        return self._done
 
 
 class Stage(abc.ABC):
@@ -66,7 +44,7 @@ class CmdStage(Stage):
     """
     def __init__(self, name, commands):
         super().__init__(name)
-        self._commands: list[str] = commands
+        self._commands: List[str] = commands
 
     @property
     def command(self) -> str:
@@ -87,19 +65,42 @@ class GitStage(Stage):
         return f"git clone {self._repository} && git checkout {self._branch}"
 
 
+class Task:
+    def __init__(self, id_: str, stages: List[Stage]):
+        self._id: str = id_
+        self._stages: List[Stage] = stages
+        self._done: bool = False
+
+    @property
+    def id(self) -> str:
+        return self._id
+
+    @property
+    def stages(self):
+        return self._stages
+
+    def set_done(self):
+        self._done = True
+
+    @property
+    def done(self):
+        return self._done
+
+
 class TaskManager:
     def __init__(self):
         self._tasks = SimpleQueue()
         self._completed_tasks: List[Task] = []
 
-    def __iter__(self):
-        return TaskManagerIter(self)
+    def __iter__(self) -> Iterator[Task]:
+        if not self._tasks.empty():
+            yield self._tasks.get()
 
     @property
     def tasks(self):
         return self._tasks
 
-    def add_task(self, id_: str, stages: List[GitStageModel | CmdStageModel]):
+    def add_task(self, id_: str, stages: List[Union[GitStageModel, CmdStageModel]]):
         """
         DOCTEST:
         >>> manager = TaskManager()
@@ -119,29 +120,15 @@ class TaskManager:
     def complete_task(self, task: Task):
         """
         Adds task to the list of completed ones
-        :param task:
-        :return:
         """
         self._completed_tasks.append(task)
 
     def get_completed_task_by_id(self, task_id: str) -> Task:
         """
         Finds task by its id and returns it
-        :param task_id:
-        :return:
         """
         completed_task = next(task for task in self._completed_tasks if task.id == task_id)
         return completed_task
-
-
-class TaskManagerIter:
-    def __init__(self, task_manager: TaskManager):
-        self._tasks = task_manager.tasks
-
-    def __next__(self) -> Task:
-        if not self._tasks.empty():
-            return self._tasks.get()
-        raise StopIteration
 
 
 if __name__ == '__main__':
