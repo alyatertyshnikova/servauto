@@ -1,7 +1,10 @@
 # Позже здесь будет функциональность для запуска тасок на удаленных машинах
 import abc
 import subprocess
-from typing import Tuple
+from typing import Tuple, Optional
+import threading
+
+from models.status import Status
 
 from paramiko.client import SSHClient
 
@@ -17,12 +20,40 @@ class Executor(abc.ABC):
         pass
 
 
-class LocalExecutor(Executor):
-    @staticmethod
-    def run_stage(stage_command: str) -> Tuple[str, str]:
-        command_result = subprocess.run(stage_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True,
-                                        text=True)
-        return command_result.stdout, command_result.stderr
+class LocalExecutor(threading.Thread, Executor):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._process: Optional[subprocess.Popen] = None
+        self._status: Status = Status.PENDING
+        self._current_command = None
+        self._stdout = None
+        self._stderr = None
+
+    def run(self) -> None:
+        process = subprocess.Popen(self._current_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True, text=True)
+        self._status = Status.RUNNING
+        self._process = process
+        stdout, stderr = process.communicate()
+        if stderr:
+            self._status = Status.FAILED
+        else:
+            self._status = Status.SUCCESS
+        self._stderr = stderr
+        self._stdout = stdout
+
+    def set_command(self, command: str):
+        self._current_command = command
+
+    def get_result(self) -> Tuple[str, str]:
+        return self._stderr, self._stdout
+
+    @property
+    def status(self) -> Status:
+        return self._status
+
+    def stop_stage(self):
+        self._process.kill()
+        self._status = Status.FAILED
 
 
 class SshExecutor(Executor):

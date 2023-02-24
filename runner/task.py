@@ -4,7 +4,7 @@ from queue import SimpleQueue
 from typing import List, Optional, Union, Iterator
 
 from models.models import GitStageModel, CmdStageModel
-from runner.status import Status
+from models.status import Status
 
 
 class Stage(abc.ABC):
