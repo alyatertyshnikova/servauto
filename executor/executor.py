@@ -9,7 +9,7 @@ from concurrent.futures import Future, CancelledError
 from paramiko.client import SSHClient
 
 
-class LocalExecutor(threading.Thread):
+class LocalStageExecutor(threading.Thread):
     def __init__(self, command: str, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._process: Optional[subprocess.Popen] = None
@@ -40,11 +40,11 @@ class LocalExecutor(threading.Thread):
             self._future.set_exception(err)
             self._status = Status.FAILED
 
-    def get_result(self, timeout: Optional[int] = None) -> Tuple[str, str]:
+    def get_result(self, timeout: Optional[float] = None) -> Optional[Tuple[str, str]]:
         try:
             return self._future.result(timeout)
-        except CancelledError:
-            return "", ""
+        except (CancelledError, TimeoutError):
+            return None
 
     def cancel(self):
         if self._process is not None:
@@ -67,7 +67,7 @@ class SshExecutor(threading.Thread):
 
 
 if __name__ == '__main__':
-    local_executor = LocalExecutor("ping localhost", threading.Semaphore(value=1))
+    local_executor = LocalStageExecutor("ping localhost", threading.Semaphore(value=1))
     local_executor.start()
     # print(local_executor.get_result())
     print(local_executor.status)
