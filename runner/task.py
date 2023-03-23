@@ -1,10 +1,15 @@
 import abc
 import doctest
-from queue import SimpleQueue
+from queue import SimpleQueue, Queue
 from typing import List, Optional, Union, Iterator
+import logging
 
 from models.models import GitStageModel, CmdStageModel
-from runner.status import Status
+from models.status import Status
+
+
+logger = logging.getLogger(__file__)
+logging.basicConfig(level=logging.DEBUG)
 
 
 class Stage(abc.ABC):
@@ -13,7 +18,7 @@ class Stage(abc.ABC):
     """
     def __init__(self, name):
         self._name: str = name
-        self._status: Optional[Status] = None
+        self._status: Status = Status.PENDING
         self._result: Optional[str] = None
 
     @abc.abstractmethod
@@ -86,21 +91,31 @@ class Task:
     def done(self):
         return self._done
 
+    def __str__(self):
+        return f"Task({self._id})"
+
+
+class TaskNotFound(Exception):
+    pass
+
 
 class TaskManager:
     def __init__(self):
         self._tasks = SimpleQueue()
-        self._completed_tasks: List[Task] = []
+        self._future_tasks = Queue()
 
-    def __iter__(self) -> Iterator[Task]:
+    def get_task(self) -> Optional[Task]:
         if not self._tasks.empty():
-            yield self._tasks.get()
+            task = self._tasks.get()
+            self._future_tasks.put(task)
+            return task
+        return
 
     @property
     def tasks(self):
         return self._tasks
 
-    def add_task(self, id_: str, stages: List[Union[GitStageModel, CmdStageModel]]):
+    def add_task(self, id_: str, stages: List[Union[GitStageModel, CmdStageModel]]) -> None:
         """
         DOCTEST:
         >>> manager = TaskManager()
@@ -112,23 +127,21 @@ class TaskManager:
                 new_stage = GitStage(stage.name, stage.git.repository, stage.git.branch)
             else:
                 new_stage = CmdStage(stage.name, stage.cmd)
-            new_stage.set_status(Status.PENDING)
             task_stages.append(new_stage)
         task = Task(id_, task_stages)
+        logger.debug("task was created: %s", task)
         self._tasks.put(task)
 
-    def complete_task(self, task: Task):
-        """
-        Adds task to the list of completed ones
-        """
-        self._completed_tasks.append(task)
-
-    def get_completed_task_by_id(self, task_id: str) -> Task:
+    def get_task_status(self, task_id: int) -> str:
         """
         Finds task by its id and returns it
         """
-        completed_task = next(task for task in self._completed_tasks if task.id == task_id)
-        return completed_task
+        for i in range(self._future_tasks.qsize()):
+            task = self._future_tasks.queue[i]
+            if task.id == task_id:
+                return task.done
+        else:
+            raise TaskNotFound(task_id)
 
 
 if __name__ == '__main__':
