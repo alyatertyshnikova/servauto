@@ -7,3 +7,4 @@ class Status(enum.Enum):
     SUCCESS = "success"
     RUNNING = "running"
     PENDING = "pending"
+    ABORTED = "aborted"

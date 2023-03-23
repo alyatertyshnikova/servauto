@@ -1,34 +1,24 @@
 import abc
 import doctest
-from queue import SimpleQueue
-from typing import List, Optional
+from queue import SimpleQueue, Queue
+from typing import List, Optional, Union, Iterator
+import logging
 
-from runner.status import Status
+from models.models import GitStageModel, CmdStageModel
+from models.status import Status
 
 
-class Task:
-    def __init__(self, stages: list):
-        self._stages: List[Stage] = stages
-        self._done: bool = False
-
-    @property
-    def stages(self):
-        return self._stages
-
-    def set_done(self):
-        self._done = True
-
-    @property
-    def done(self):
-        return self._done
+logger = logging.getLogger(__file__)
+logging.basicConfig(level=logging.DEBUG)
 
 
 class Stage(abc.ABC):
     """
     Abstract class for any kind of steps. Should store step command which will be executed.
     """
-    def __init__(self):
-        self._status: Optional[Status] = None
+    def __init__(self, name):
+        self._name: str = name
+        self._status: Status = Status.PENDING
         self._result: Optional[str] = None
 
     @abc.abstractmethod
@@ -37,6 +27,14 @@ class Stage(abc.ABC):
         Returns a shell command that should be executed by Executor instance.
         """
         pass
+
+    @property
+    def status(self) -> Optional[Status]:
+        return self._status
+
+    @property
+    def name(self) -> Optional[str]:
+        return self._name
 
     def set_status(self, status: Status) -> None:
         self._status = status
@@ -50,9 +48,8 @@ class CmdStage(Stage):
     Class for shell commands
     """
     def __init__(self, name, commands):
-        super().__init__()
-        self._name: str = name
-        self._commands: list[str] = commands
+        super().__init__(name)
+        self._commands: List[str] = commands
 
     @property
     def command(self) -> str:
@@ -64,8 +61,7 @@ class GitStage(Stage):
     Class for git commands that checkout a specific branch for the specified repository.
     """
     def __init__(self, name, repository, branch):
-        super().__init__()
-        self._name: str = name
+        super().__init__(name)
         self._repository: str = repository
         self._branch: str = branch
 
@@ -74,15 +70,52 @@ class GitStage(Stage):
         return f"git clone {self._repository} && git checkout {self._branch}"
 
 
+class Task:
+    def __init__(self, id_: str, stages: List[Stage]):
+        self._id: str = id_
+        self._stages: List[Stage] = stages
+        self._done: bool = False
+
+    @property
+    def id(self) -> str:
+        return self._id
+
+    @property
+    def stages(self):
+        return self._stages
+
+    def set_done(self):
+        self._done = True
+
+    @property
+    def done(self):
+        return self._done
+
+    def __str__(self):
+        return f"Task({self._id})"
+
+
+class TaskNotFound(Exception):
+    pass
+
+
 class TaskManager:
     def __init__(self):
         self._tasks = SimpleQueue()
+        self._future_tasks = Queue()
+
+    def get_task(self) -> Optional[Task]:
+        if not self._tasks.empty():
+            task = self._tasks.get()
+            self._future_tasks.put(task)
+            return task
+        return
 
     @property
-    def has_task(self) -> bool:
-        return not self._tasks.empty()
+    def tasks(self):
+        return self._tasks
 
-    def add_task(self, stages: List[dict]):
+    def add_task(self, id_: str, stages: List[Union[GitStageModel, CmdStageModel]]) -> None:
         """
         DOCTEST:
         >>> manager = TaskManager()
@@ -90,17 +123,25 @@ class TaskManager:
         """
         task_stages = []
         for stage in stages:
-            if stage.get("git") is not None:
-                new_stage = GitStage(stage["name"], stage["git"]["repository"], stage["git"]["branch"])
+            if isinstance(stage, GitStageModel):
+                new_stage = GitStage(stage.name, stage.git.repository, stage.git.branch)
             else:
-                new_stage = CmdStage(stage["name"], stage["cmd"])
-            new_stage.set_status(Status.PENDING)
+                new_stage = CmdStage(stage.name, stage.cmd)
             task_stages.append(new_stage)
-        task = Task(task_stages)
+        task = Task(id_, task_stages)
+        logger.debug("task was created: %s", task)
         self._tasks.put(task)
 
-    def next_task(self) -> Task:
-        return self._tasks.get()
+    def get_task_status(self, task_id: int) -> str:
+        """
+        Finds task by its id and returns it
+        """
+        for i in range(self._future_tasks.qsize()):
+            task = self._future_tasks.queue[i]
+            if task.id == task_id:
+                return task.done
+        else:
+            raise TaskNotFound(task_id)
 
 
 if __name__ == '__main__':
