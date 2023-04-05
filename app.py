@@ -1,3 +1,5 @@
+from typing import Union
+
 import uvicorn
 from fastapi import FastAPI
 
@@ -15,7 +17,7 @@ async def run_task(task: TaskModel) -> str:
     global task_id_counter
     task_id_counter = task_id_counter + 1
     engine.start_task(task_id_counter, task)
-    return task_id_counter
+    return str(task_id_counter)
 
 
 @app.get("/status/{task_id}")
@@ -23,11 +25,17 @@ async def get_task_status(task_id: str) -> str:
     """
     Finds task by id and returns its status
     """
-    try:
-        task_status = engine.get_task_status(int(task_id))
-    except Exception:
-        return "Task not found"
+    task_status = engine.get_task_status(int(task_id))
     return task_status
+
+
+@app.get("/result/{task_id}")
+async def get_task_result(task_id: str) -> Union[dict[str, str], str]:
+    """
+    Find task by id and return its result
+    """
+    task_result = engine.get_task_result(int(task_id))
+    return task_result
 
 
 if __name__ == '__main__':

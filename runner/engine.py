@@ -1,3 +1,5 @@
+from typing import Dict
+
 from models.models import TaskModel
 from runner.runner import Runner
 from runner.task import TaskManager
@@ -17,3 +19,9 @@ class Engine:
         Finds task by its id and collects its stages statuses into one
         """
         return self._task_manager.get_task_status(task_id)
+
+    def get_task_result(self, task_id: int) -> Dict[str, str]:
+        """
+        Finds task by its id and ?
+        """
+        return self._task_manager.get_task_result(task_id)

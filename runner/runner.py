@@ -18,7 +18,7 @@ class TaskExecutor(threading.Thread):
             executor = LocalStageExecutor(stage.command)
             stage.set_status(Status.RUNNING)
             executor.start()
-            stage_result = executor.get_result()
+            stage.set_result(executor.get_result())
 
         self._task.set_done()
         self._semaphore.release()

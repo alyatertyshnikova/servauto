@@ -1,48 +1,37 @@
-import requests
+import asyncio
 import time
 
-import aiohttp
-import asyncio
+from client.client import Client
 
-
-def get_result(task_id: str):
-    print(requests.get(f"http://localhost:8000/status/{task_id}").text)
-
-
-ids = []
-
-
-async def run_task(session: aiohttp.ClientSession):
-    json_load = {
-        "stages": [
-                {
-                    "name": "test",
-                    "cmd": ["curl 'https://parallel-ssh.readthedocs.io/en/latest/ssh_single.html'"]
-                }
-            ]
+json_load = {
+    "stages": [
+        {
+            "name": "test",
+            "cmd": ["curl 'https://parallel-ssh.readthedocs.io/en/latest/ssh_single.html'"]
+        },
+        {
+            "name": "pytest",
+            "cmd": ["pip install pytest"]
         }
-    async with session.post("http://localhost:8000/run_task", json=json_load) as response:
-        response_json = await response.json()
-        print("Task was created: ", response_json)
-        ids.append(int(response_json))
-        return int(response_json)
+    ]
+}
+
+client = Client()
 
 
 async def main():
+    tasks = []
+    for _ in range(1, 4):
+        tasks.append(asyncio.create_task(client.run_task(json_load)))
 
-    async with aiohttp.ClientSession() as session:
-        tasks = []
-        for _ in range(1, 4):
-            tasks.append(asyncio.create_task(run_task(session)))
-
-        await asyncio.gather(*tasks)
-        for task in tasks:
-            print(task)
+    await asyncio.gather(*tasks)
+    for task in tasks:
+        print(task)
 
 
 asyncio.run(main())
 
 time.sleep(5)
 
-for i in ids:
-    get_result(i)
+for i in client.ids:
+    asyncio.run(client.get_task_result(i))
