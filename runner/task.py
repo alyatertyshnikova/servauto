@@ -1,5 +1,6 @@
 import abc
 import doctest
+import json
 import logging
 from queue import SimpleQueue, Queue
 from typing import List, Optional, Union
@@ -146,14 +147,16 @@ class TaskManager:
         else:
             raise TaskNotFound(task_id)
 
-    def get_task_result(self, task_id: int) -> dict[str, str]:
+    def get_task_result(self, task_id: int) -> str:
         task_results = {}
         for i in range(self._future_tasks.qsize()):
             task = self._future_tasks.queue[i]
             if task.id == task_id:
                 for stage in task.stages:
                     task_results[stage.name] = stage.result
-                return task_results
+                    if stage.status is Status.FAILED:
+                        break
+                return json.dumps(task_results)
         else:
             raise TaskNotFound(task_id)
 

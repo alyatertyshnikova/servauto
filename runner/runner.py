@@ -19,6 +19,9 @@ class TaskExecutor(threading.Thread):
             stage.set_status(Status.RUNNING)
             executor.start()
             stage.set_result(executor.get_result())
+            stage.set_status(executor.status)
+            if stage.status is Status.FAILED:
+                break
 
         self._task.set_done()
         self._semaphore.release()

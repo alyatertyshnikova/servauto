@@ -6,6 +6,10 @@ from client.client import Client
 json_load = {
     "stages": [
         {
+            "name": "error",
+            "cmd": ["cd fghjfhl"]
+        },
+        {
             "name": "test",
             "cmd": ["curl 'https://parallel-ssh.readthedocs.io/en/latest/ssh_single.html'"]
         },
@@ -28,10 +32,18 @@ async def main():
     for task in tasks:
         print(task)
 
+    time.sleep(5)
+
+    result_tasks = []
+    for i in client.ids:
+        result_tasks.append(asyncio.create_task(client.get_task_result(i)))
+
+    await asyncio.gather(*result_tasks)
+    for task in result_tasks:
+        print(task.result())
+
 
 asyncio.run(main())
 
-time.sleep(5)
 
-for i in client.ids:
-    asyncio.run(client.get_task_result(i))
+
