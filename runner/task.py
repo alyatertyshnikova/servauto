@@ -143,7 +143,7 @@ class TaskManager:
         for i in range(self._future_tasks.qsize()):
             task = self._future_tasks.queue[i]
             if task.id == task_id:
-                return task.done
+                return task.stages[-1].status.value
         else:
             raise TaskNotFound(task_id)
 
