@@ -33,7 +33,7 @@ class LocalStageExecutor(threading.Thread):
                 return
 
             self._future.set_result((stdout, stderr))
-            if not stdout:
+            if process.returncode != 0:
                 self._stage.set_status(Status.FAILED)
             else:
                 self._stage.set_status(Status.SUCCESS)

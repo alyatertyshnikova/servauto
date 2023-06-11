@@ -8,3 +8,4 @@ class Status(enum.Enum):
     RUNNING = "running"
     PENDING = "pending"
     ABORTED = "aborted"
+    NOT_STARTED = "not started"
