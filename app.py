@@ -33,7 +33,7 @@ async def get_task_status(task_id: str) -> str:
         task_status = engine.get_task_status(int(task_id))
         return task_status
     except TaskNotFound as ex:
-        raise HTTPException(status_code=500, detail=f"Task {task_id} not found: {ex}")
+        raise HTTPException(status_code=404, detail=f"Task {task_id} not found: {ex}")
 
 
 @app.get("/result/{task_id}")
@@ -45,7 +45,7 @@ async def get_task_result(task_id: str) -> Union[dict[str, str], str]:
         task_result = engine.get_task_result(int(task_id))
         return task_result
     except TaskNotFound as ex:
-        raise HTTPException(status_code=500, detail=f"Task {task_id} not found: {ex}")
+        raise HTTPException(status_code=404, detail=f"Task {task_id} not found: {ex}")
 
 
 if __name__ == '__main__':

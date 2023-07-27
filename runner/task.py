@@ -2,7 +2,7 @@ import abc
 import doctest
 import json
 import logging
-from queue import SimpleQueue, Queue
+from queue import Queue
 from typing import List, Optional, Union
 
 from models.models import GitStageModel, CmdStageModel
@@ -16,6 +16,7 @@ class Stage(abc.ABC):
     """
     Abstract class for any kind of steps. Should store step command which will be executed.
     """
+
     def __init__(self, name):
         self._name: str = name
         self._status: Status = Status.PENDING
@@ -51,6 +52,7 @@ class CmdStage(Stage):
     """
     Class for shell commands
     """
+
     def __init__(self, name, commands):
         super().__init__(name)
         self._commands: List[str] = commands
@@ -64,6 +66,7 @@ class GitStage(Stage):
     """
     Class for git commands that checkout a specific branch for the specified repository.
     """
+
     def __init__(self, name, repository, branch):
         super().__init__(name)
         self._repository: str = repository
@@ -105,7 +108,7 @@ class TaskNotFound(Exception):
 
 class TaskManager:
     def __init__(self):
-        self._tasks = SimpleQueue()
+        self._tasks = Queue()
         self._future_tasks = Queue()
 
     def get_task(self) -> Optional[Task]:
@@ -140,6 +143,13 @@ class TaskManager:
         """
         Finds task by its id and returns its status
         """
+        if any(task_id == task.id for task in self._tasks.queue):
+            return Status.NOT_STARTED.value
+        # for i in range(self._tasks.qsize()):
+        #     task = self._tasks.queue[i]
+        #     if task.id == task_id:
+        #         return Status.NOT_STARTED.value
+
         for i in range(self._future_tasks.qsize()):
             task = self._future_tasks.queue[i]
             if task.id == task_id:

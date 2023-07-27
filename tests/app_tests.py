@@ -1,5 +1,5 @@
-import asyncio
 import json
+from datetime import timedelta
 
 import pytest
 import pytest_asyncio
@@ -45,27 +45,28 @@ async def run_task(request):
 
     yield client, response
 
+    await client.close_session()
+
 
 @pytest.mark.asyncio
 async def test_run_task():
     client = Client()
     response = await client.run_task(JSON_LOAD)
-    assert type(response) == str
+    assert isinstance(response, str)
 
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("task, status, result",
-                         [(JSON_LOAD, ["success", "pending"], EXPECTED_RESPONSE),
-                          (JSON_LOAD_WITH_ERROR, ["failed", "pending"], EXPECTED_RESPONSE_WITH_ERROR)])
+                         [(JSON_LOAD, "success", EXPECTED_RESPONSE),
+                          (JSON_LOAD_WITH_ERROR, "failed", EXPECTED_RESPONSE_WITH_ERROR)])
 async def test_get_status_and_result(run_task_response, task, status, result):
-    client, response = run_task_response
-    await asyncio.sleep(5)
+    client, task_id = run_task_response
+    await client.wait_for_task_is_done(task_id, timedelta(minutes=3))
 
-    task_result_json = await client.get_task_result(response)
-    task_status = await client.get_task_status(response)
+    task_status = await client.get_task_status(task_id)
+    task_result_json = await client.get_task_result(task_id)
 
     task_result = json.loads(task_result_json)
 
-    assert task_status in status
+    assert task_status == status
     assert list(task_result.keys()) == result
-
