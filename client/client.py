@@ -11,7 +11,7 @@ from models.status import Status
 
 class Client:
     def __init__(self):
-        self._base_url: str = "http://localhost:8000"
+        self._base_url: str = "http://server.servauto.com:8000"
         self._session = aiohttp.ClientSession()
 
     async def get_task_result(self, task_id: str) -> str:
