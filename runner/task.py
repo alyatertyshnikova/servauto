@@ -153,7 +153,8 @@ class TaskManager:
         for i in range(self._future_tasks.qsize()):
             task = self._future_tasks.queue[i]
             if task.id == task_id:
-                return task.stages[-1].status.value
+                any_stage_failure = any(stage.status == Status.FAILED for stage in task.stages)
+                return Status.FAILED.value if any_stage_failure else task.stages[-1].status.value
         else:
             raise TaskNotFound(task_id)
 
