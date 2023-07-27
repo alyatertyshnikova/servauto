@@ -1,12 +1,12 @@
 import abc
 import doctest
-from queue import SimpleQueue, Queue
-from typing import List, Optional, Union, Iterator
+import json
 import logging
+from queue import SimpleQueue, Queue
+from typing import List, Optional, Union
 
 from models.models import GitStageModel, CmdStageModel
 from models.status import Status
-
 
 logger = logging.getLogger(__file__)
 logging.basicConfig(level=logging.DEBUG)
@@ -31,6 +31,10 @@ class Stage(abc.ABC):
     @property
     def status(self) -> Optional[Status]:
         return self._status
+
+    @property
+    def result(self) -> Optional[Status]:
+        return self._result
 
     @property
     def name(self) -> Optional[str]:
@@ -134,12 +138,25 @@ class TaskManager:
 
     def get_task_status(self, task_id: int) -> str:
         """
-        Finds task by its id and returns it
+        Finds task by its id and returns its status
         """
         for i in range(self._future_tasks.qsize()):
             task = self._future_tasks.queue[i]
             if task.id == task_id:
-                return task.done
+                return task.stages[-1].status.value
+        else:
+            raise TaskNotFound(task_id)
+
+    def get_task_result(self, task_id: int) -> str:
+        task_results = {}
+        for i in range(self._future_tasks.qsize()):
+            task = self._future_tasks.queue[i]
+            if task.id == task_id:
+                for stage in task.stages:
+                    task_results[stage.name] = stage.result
+                    if stage.status is Status.FAILED:
+                        break
+                return json.dumps(task_results)
         else:
             raise TaskNotFound(task_id)
 

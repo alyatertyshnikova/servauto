@@ -8,14 +8,15 @@ from concurrent.futures import Future, CancelledError
 
 from paramiko.client import SSHClient
 
+from runner.task import Stage
+
 
 class LocalStageExecutor(threading.Thread):
-    def __init__(self, command: str, *args, **kwargs):
+    def __init__(self, stage: Stage, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._process: Optional[subprocess.Popen] = None
-        self._command: str = command
+        self._stage: Stage = stage
         self._future = Future()
-        self._status: Status = Status.PENDING
 
     @property
     def status(self):
@@ -24,7 +25,7 @@ class LocalStageExecutor(threading.Thread):
     def run(self) -> None:
         self._status = Status.RUNNING
         try:
-            process = subprocess.Popen(self._command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True,
+            process = subprocess.Popen(self._stage.command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True,
                                        text=True, encoding="cp866")
             self._process = process
             stdout, stderr = process.communicate()
@@ -32,13 +33,13 @@ class LocalStageExecutor(threading.Thread):
                 return
 
             self._future.set_result((stdout, stderr))
-            if not stderr:
-                self._status = Status.SUCCESS
+            if not stdout:
+                self._stage.set_status(Status.FAILED)
             else:
-                self._status = Status.FAILED
+                self._stage.set_status(Status.SUCCESS)
         except Exception as err:
             self._future.set_exception(err)
-            self._status = Status.FAILED
+            self._stage.set_status(Status.FAILED)
 
     def get_result(self, timeout: Optional[float] = None) -> Optional[Tuple[str, str]]:
         try:
@@ -50,7 +51,7 @@ class LocalStageExecutor(threading.Thread):
         if self._process is not None:
             self._process.kill()
             self._future.cancel()
-            self._status = Status.ABORTED
+            self._stage.set_status(Status.ABORTED)
         else:
             raise ChildProcessError("Process is not created yet.")
 

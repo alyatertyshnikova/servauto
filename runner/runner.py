@@ -15,10 +15,12 @@ class TaskExecutor(threading.Thread):
         for stage in self._task.stages:
             if self._stop_event.is_set():
                 break
-            executor = LocalStageExecutor(stage.command)
+            executor = LocalStageExecutor(stage)
             stage.set_status(Status.RUNNING)
             executor.start()
-            stage_result = executor.get_result()
+            stage.set_result(executor.get_result())
+            if stage.status is Status.FAILED:
+                break
 
         self._task.set_done()
         self._semaphore.release()
