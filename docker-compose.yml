@@ -1,23 +1,32 @@
-version: "3"
+version: "2.1"
 services:
   server:
     image: servauto/server
     build:
       dockerfile: server.dockerfile
       context: .
-    hostname: server.servauto.com
+    hostname: server
+    networks:
+      servauto-network:
+
     ports:
       - "8000:8000"
-    networks:
-      - servauto-network
+    healthcheck:
+      test: ["CMD", "curl", "http://0.0.0.0:8000"]
+      timeout: 5s
+      retries: 3
+
   tests:
     image: servauto/tests
     build:
       dockerfile: tests.dockerfile
       context: .
     depends_on:
-      - server
+       server:
+         condition: service_healthy
     networks:
-      - servauto-network
+      servauto-network:
+
 networks:
   servauto-network:
+    driver: bridge

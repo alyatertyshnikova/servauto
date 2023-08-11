@@ -8,10 +8,12 @@ import aiohttp
 
 from models.status import Status
 
+SERVER_HOST_NAME = "server"
+
 
 class Client:
     def __init__(self):
-        self._base_url: str = "http://server.servauto.com:8000"
+        self._base_url: str = f"http://{SERVER_HOST_NAME}:8000"
         self._session = aiohttp.ClientSession()
 
     async def get_task_result(self, task_id: str) -> str:
