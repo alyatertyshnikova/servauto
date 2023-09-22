@@ -1,0 +1,48 @@
+version: '3.8'
+
+networks:
+  perf-network:
+
+services:
+  servauto:
+    image: servauto/server
+    build:
+      dockerfile: server.dockerfile
+      context: .
+    hostname: server
+    networks:
+      - perf-network
+
+  k6:
+    image: loadimpact/k6:latest
+    volumes:
+      - ./perf:/perf
+    command: ["run", "/perf/test.js"]
+    depends_on:
+      - servauto
+    environment:
+      - K6_OUT=influxdb=http://influxdb:8086/k6
+    networks:
+      - perf-network
+
+  influxdb:
+    image: influxdb:1.8
+    networks:
+      - perf-network
+    ports:
+      - "8086:8086"
+    environment:
+      - INFLUXDB_DB=k6
+
+  grafana:
+    image: grafana/grafana:latest
+    networks:
+      - perf-network
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_BASIC_ENABLED=false
+    volumes:
+      - ./grafana:/etc/grafana/provisioning/
